@@ -5,7 +5,6 @@ import Parsers.toLongs
 import SolutionInput
 import SolutionResult
 import asSolution
-import jdk.javadoc.internal.doclets.toolkit.util.DocPath.empty
 import kotlin.math.abs
 
 class Day02 : AdventOfCode {
@@ -23,12 +22,13 @@ class Day02 : AdventOfCode {
 }
 
 fun List<Long>.safe(): Boolean {
-    val diffs = List(this.drop(1).size) { i -> this[i + 1] - this[i] }
-    return (diffs.all { it > 0 } || diffs.all { it < 0 }) && diffs.all { abs(it) <= 3 }
+    val differences = zipWithNext { a, b -> b - a }
+    return (differences.all { it > 0 } || differences.all { it < 0 }) && differences.all { abs(it) <= 3 }
 }
 
 fun List<Long>.safeWithOneDropped() =
-    List(size) { toRemove ->
-        filterIndexed { i, _ -> i != toRemove }
-    }.any { it.safe() }
+    indices.any { indexToRemove ->
+        filterIndexed { index, _ -> index != indexToRemove }.safe()
+    }
+
 
