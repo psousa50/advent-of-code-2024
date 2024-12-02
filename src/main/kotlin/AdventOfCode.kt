@@ -12,6 +12,7 @@ interface AdventOfCode {
     companion object {
         val days = mapOf(
             1 to day01.Day01(),
+2 to day02.Day02(),
             // {{ NextDay }}
         )
     }
