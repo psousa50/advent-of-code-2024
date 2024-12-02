@@ -1,5 +1,6 @@
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.default
+import java.io.File
 import kotlin.system.measureTimeMillis
 
 fun main(args: Array<String>) {
@@ -15,8 +16,7 @@ fun main(args: Array<String>) {
 }
 
 fun AdventOfCode.runPart(part: Int, sample: Boolean = false): SolutionResult {
-    val file = if (sample) "sample$part" else "input"
-    val inputFilename = "Day${"%02d".format(day)}/$file.txt"
+    val inputFilename = if (sample) sampleOf(part) else fileFor("input")
     val input = SolutionInput(Parsers.readLinesFromResource(inputFilename))
     if (input.lines.isEmpty()) {
         throw IllegalArgumentException("No input found for $inputFilename")
@@ -28,8 +28,17 @@ fun AdventOfCode.runPart(part: Int, sample: Boolean = false): SolutionResult {
     }
 }
 
+fun AdventOfCode.fileFor(name: String) = "Day${"%02d".format(day)}/$name.txt"
+
+fun AdventOfCode.sampleOf(part: Int): String {
+    val sample1 = fileFor("sample1")
+    val sample2 = fileFor("sample2")
+    return if (part == 1) sample1 else
+        if (File(sample2).exists()) sample2 else sample1
+}
+
 fun AdventOfCode.showResult(part: Int, sample: Boolean = false) {
-    val result = measureExecutionTime {  runPart(part, sample)}
+    val result = measureExecutionTime { runPart(part, sample) }
     println("${ANSI_YELLOW}Day $day Part $part: ${ANSI_CYAN}${result.first}${ANSI_RESET} (${result.second}ms)")
 }
 

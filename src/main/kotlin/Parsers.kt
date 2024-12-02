@@ -16,6 +16,9 @@ object Parsers {
                 }
             }
         }
+
+    fun String.toLongs() =
+        trim().split(" ").filter {it.isNotBlank()}.map { n -> n.toLong() }
 }
 
 fun Collection<Int>.product() = reduce { acc, i -> acc * i }
