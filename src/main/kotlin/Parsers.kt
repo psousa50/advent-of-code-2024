@@ -1,4 +1,9 @@
 object Parsers {
+
+    fun resourceExists(fileName: String): Boolean {
+        return javaClass.getResourceAsStream(fileName) != null
+    }
+
     fun readLinesFromResource(fileName: String): List<String> {
         val inputStream = javaClass.getResourceAsStream(fileName) ?: throw Exception("File $fileName not found")
         return inputStream.bufferedReader().readLines()

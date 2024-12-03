@@ -13,6 +13,8 @@ interface AdventOfCode {
         val days = mapOf(
             1 to day01.Day01(),
 2 to day02.Day02(),
+3 to day03.Day03(),
+3 to day03.Day03(),
             // {{ NextDay }}
         )
     }
