@@ -55,7 +55,6 @@ def create_new_day(day_number):
 
     write_file(f"{resources_folder}/input.txt", "")
     write_file(f"{resources_folder}/sample1.txt", "")
-    write_file(f"{resources_folder}/sample2.txt", "")
 
 
 class Context:

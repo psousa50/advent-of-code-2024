@@ -1,4 +1,3 @@
-import Parsers.resourceExists
 import com.xenomachina.argparser.ArgParser
 import com.xenomachina.argparser.default
 import kotlin.system.measureTimeMillis
@@ -15,8 +14,8 @@ fun main(args: Array<String>) {
     }
 }
 
-fun AdventOfCode.runPart(part: Int, sample: Boolean = false): SolutionResult {
-    val inputFilename = if (sample) sampleOf(part) else fileFor("input")
+fun AdventOfCode.runPart(part: Int, sample: Int? = null): SolutionResult {
+    val inputFilename = if (sample != null) fileFor("sample$sample") else fileFor("input")
     val input = SolutionInput(Parsers.readLinesFromResource(inputFilename))
     if (input.lines.isEmpty()) {
         throw IllegalArgumentException("No input found for $inputFilename")
@@ -30,14 +29,8 @@ fun AdventOfCode.runPart(part: Int, sample: Boolean = false): SolutionResult {
 
 fun AdventOfCode.fileFor(name: String) = "Day${"%02d".format(day)}/$name.txt"
 
-fun AdventOfCode.sampleOf(part: Int): String {
-    val sample1 = fileFor("sample1")
-    val sample2 = fileFor("sample2")
-    return if (part == 1) sample1 else
-        if (resourceExists(sample2)) sample2 else sample1
-}
-
-fun AdventOfCode.showResult(part: Int, sample: Boolean = false) {
+fun AdventOfCode.showResult(part: Int, sample: Int?) {
+    println("Day $day Part $part: sample: $sample")
     val result = measureExecutionTime { runPart(part, sample) }
     println("${ANSI_YELLOW}Day $day Part $part: ${ANSI_CYAN}${result.first}${ANSI_RESET} (${result.second}ms)")
 }
@@ -51,10 +44,10 @@ fun <T> measureExecutionTime(block: () -> T): Pair<T, Long> {
 }
 
 class AdventOfCodeArgs(parser: ArgParser) {
-    val sample by parser.flagging(
+    val sample by parser.storing(
         "-S", "--sample",
         help = "run on sample input"
-    )
+    ) { toInt() }.default(1)
     val day by parser.storing(
         "-D", "--day",
         help = "day number"

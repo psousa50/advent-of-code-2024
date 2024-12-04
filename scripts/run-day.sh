@@ -14,7 +14,7 @@ if [ -n "$PART_ARG" ]; then
 fi
 
 if [ -n "$SAMPLE_ARG" ]; then
-  SAMPLE="--sample"
+  SAMPLE="--sample=$SAMPLE_ARG"
 
 fi
 
