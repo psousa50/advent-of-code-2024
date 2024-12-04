@@ -1,6 +1,7 @@
 object Parsers {
 
     fun resourceExists(fileName: String): Boolean {
+        println(javaClass.getResourceAsStream(fileName))
         return javaClass.getResourceAsStream(fileName) != null
     }
 
