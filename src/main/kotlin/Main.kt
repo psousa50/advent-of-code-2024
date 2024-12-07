@@ -6,10 +6,10 @@ fun main(args: Array<String>) {
     ArgParser(args).parseInto(::AdventOfCodeArgs).run {
         val solution = AdventOfCode.days[day] ?: throw IllegalArgumentException("Day: $day not implemented")
         if (part == 0 || part == 1) {
-            solution.showResult(1, sample)
+            solution.showResult(1, sample.takeIf { it > 0 })
         }
         if (part == 0 || part == 2) {
-            solution.showResult(2, sample)
+            solution.showResult(2, sample.takeIf { it > 0 })
         }
     }
 }
@@ -47,7 +47,7 @@ class AdventOfCodeArgs(parser: ArgParser) {
     val sample by parser.storing(
         "-S", "--sample",
         help = "run on sample input"
-    ) { toInt() }.default(1)
+    ) { toInt() }.default(0)
     val day by parser.storing(
         "-D", "--day",
         help = "day number"
