@@ -3,7 +3,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 
 class Day02Test : FunSpec({
-    context("Day Day02") {
+    context("Day 02") {
         test("Part 1") {
             Day02().runPart(1).asInt shouldBe 606
         }
