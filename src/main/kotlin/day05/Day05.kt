@@ -63,7 +63,7 @@ data class Update(val pages: List<Int>) {
         return if (fixed != this) fixed else null
     }
 
-    fun fixOrder(rules: Rules): Update {
+    private fun fixOrder(rules: Rules): Update {
         val orderedPages = pages.toMutableList()
         var done = false
         while (!done) {
@@ -79,7 +79,6 @@ data class Update(val pages: List<Int>) {
             done = !changed
         }
 
-        println(orderedPages)
         return Update(orderedPages)
     }
 }
