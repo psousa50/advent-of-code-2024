@@ -8,7 +8,7 @@ class Day09Test : FunSpec({
             Day09().runPart(1).asLong shouldBe 6283404590840
         }
         test("Part 2") {
-            Day09().runPart(2).asLong shouldBe 0
+            Day09().runPart(2).asLong shouldBe 6304576012713
         }
     }
 })

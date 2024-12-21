@@ -9,52 +9,163 @@ class Day09 : AdventOfCode {
     override val day = 9
 
     override fun partOne(input: SolutionInput): SolutionResult {
-        val blocks = input.lines.first().map { it.digitToInt() }.mapIndexed { index, id ->
-            if (index.isEven()) File((index / 2).toString(), id) else FreeSpace(id)
-        }
+        val blocks = input.parse()
 
-        val state = State(blocks)
-        val states = generateSequence(state) { it.next() }.takeWhile { it.containsFreeSpaces() }
-        val lastState = states.last()
-
-//        states.forEach {
-//            val s = blocksToStr(it.blocks)
-//            println("${s.take(50)} --- ${s.takeLast(50)}")
-//        }
-
-//        println(blocksToStr(blocks))
-//        println(blocksToStr(lastState.blocks))
-
-        return lastState.blocks.filterIsInstance<File>()
-            .fold(0 to 0L) { (pos, sum), file ->
-                pos + file.size to sum + file.id.toLong() * file.size * (pos + file.size + pos - 1) / 2
-            }.second.asSolution()
-
+        return generateSequence(blocks) {
+            it.movePartialFileFromTail()
+        }.takeUntil {
+            it.isContiguous()
+        }.last()
+            .checkSum()
+            .asSolution()
     }
 
     override fun partTwo(input: SolutionInput): SolutionResult {
-        TODO("Not yet implemented")
+        val blocks = input.parse()
+
+        return generateSequence(blocks) {
+            it.moveWholeFileFromTail()
+        }.takeWhile {
+            it.containsUncheckedFiles()
+        }.last()
+            .checkSum()
+            .asSolution()
     }
 }
 
+private fun SolutionInput.parse() =
+    Blocks(lines.first().map { it.digitToInt() }.mapIndexed { index, id ->
+        if (index.isEven()) File((index / 2).toString(), id) else FreeSpace(id)
+    })
+
 private fun Int.isEven() = this % 2 == 0
 
+data class Blocks(val blocks: List<Block>) : List<Block> by blocks {
+    override fun toString() = blocks.joinToString("") { it.str.repeat(it.size) }
 
-data class Blocks(val blocks: List<Block>) {
-    override fun toString() = blocks.map { it.str.repeat(it.size) }.joinToString("")
+    fun movePartialFileFromTail(): Blocks {
+        val lastFile = lastFile()
+        val freeSpace = firstFreeSpace { it is FreeSpace }
+        return when {
+            !lastFile.exists || !freeSpace.exists || lastFile.index < freeSpace.index -> Blocks(blocks = blocks)
+
+            freeSpace.size > lastFile.size -> replaceAt(
+                freeSpace.index,
+                listOf(
+                    lastFile.block,
+                    FreeSpace(freeSpace.size - lastFile.size)
+                )
+            ).replaceAt(
+                lastFile.index + 1,
+                FreeSpace(lastFile.size)
+            )
+
+            freeSpace.size < lastFile.size -> replaceAt(
+                freeSpace.index,
+                lastFile.file.copy(size = freeSpace.size)
+            ).replaceAt(
+                lastFile.index,
+                listOf(
+                    lastFile.file.copy(size = lastFile.size - freeSpace.size),
+                    FreeSpace(freeSpace.size)
+                )
+            )
+
+            else -> swap(freeSpace, lastFile)
+        }
+    }
+
+    fun moveWholeFileFromTail(): Blocks {
+        val lastFile = lastFile { !it.checked }
+        val freeSpaceThatFitsFile =
+            if (lastFile.exists)
+                firstFreeSpace { it.size >= lastFile.size }
+            else
+                IndexedFreeSpace(-1, FreeSpace(0))
+        return when {
+            !lastFile.exists -> Blocks(blocks = blocks)
+            !freeSpaceThatFitsFile.exists || freeSpaceThatFitsFile.index > lastFile.index -> replaceAt(
+                lastFile.index,
+                lastFile.file.copy(checked = true)
+            )
+
+            freeSpaceThatFitsFile.size == lastFile.size -> swap(
+                freeSpaceThatFitsFile,
+                lastFile
+            )
+
+            freeSpaceThatFitsFile.size > lastFile.size ->
+                replaceAt(
+                    freeSpaceThatFitsFile.index,
+                    listOf(
+                        lastFile.block,
+                        FreeSpace(freeSpaceThatFitsFile.size - lastFile.size)
+                    )
+                ).replaceAt(
+                    lastFile.index + 1,
+                    FreeSpace(lastFile.size)
+                )
+
+            else -> swap(
+                freeSpaceThatFitsFile,
+                lastFile
+            )
+
+        }
+    }
+
+    private fun firstFreeSpace(predicate: (Block) -> Boolean = { true }) =
+        indexOfFirst { predicate(it) && it is FreeSpace }.let { index ->
+            if (index < 0) IndexedFreeSpace.empty else IndexedFreeSpace(index, blocks[index])
+        }
+
+    private fun lastFile(predicate: (File) -> Boolean = { true }) =
+        indexOfLast { it is File && predicate(it) }.let { index ->
+            if (index < 0) IndexedFile.empty else IndexedFile(index, blocks[index] as File)
+        }
+
+    private fun replaceAt(index: Int, blockToReplace: Block) = replaceAt(index, listOf(blockToReplace))
+
+    private fun replaceAt(index: Int, blocksToReplace: List<Block>): Blocks {
+        return Blocks(
+            blocks = blocks.toMutableList()
+                .apply { removeAt(index) }
+                .apply { addAll(index, blocksToReplace) })
+    }
+
+    private fun swap(block1: IndexedBlock, block2: IndexedBlock) =
+        Blocks(
+            blocks = blocks.toMutableList()
+                .apply { removeAt(block1.index) }
+                .apply { add(block1.index, block2.block) }
+                .apply { removeAt(block2.index) }
+                .apply { add(block2.index, block1.block) }
+        )
+
+
+    fun isContiguous() = lastFile().index < firstFreeSpace().index
+    fun containsUncheckedFiles() = blocks.any { it is File && !it.checked }
+
+    fun checkSum() = blocks
+        .fold(0 to 0L) { (pos, sum), file ->
+            pos + file.size to sum + file.value * file.size * (pos + file.size + pos - 1) / 2
+        }.second
 }
 
 interface Block {
     val size: Int
     val str: String
+    val value: Long
 }
 
 data class File(
     val id: String,
-    override val size: Int
+    override val size: Int,
+    val checked: Boolean = false
 ) : Block {
     override fun toString() = "F($id, $size)"
     override val str get() = id
+    override val value get() = id.toLong()
 }
 
 data class FreeSpace(
@@ -62,40 +173,33 @@ data class FreeSpace(
 ) : Block {
     override fun toString() = "S($size)"
     override val str get() = "."
+    override val value get() = 0L
 }
 
-data class State(val blocks: List<Block>) {
+interface IndexedBlock {
+    val index: Int
+    val block: Block
+    val exists get() = index >= 0
+    val size get() = block.size
+}
 
-    fun next(): State {
-        val freeSpaceIndex = blocks.indexOfFirst { it is FreeSpace }
-
-        val (newBlocks, removed) = removeFilesFromTail(blocks, blocks[freeSpaceIndex].size)
-        return State(
-            blocks = newBlocks.take(freeSpaceIndex) + removed + newBlocks.drop(freeSpaceIndex + 1),
-        )
+data class IndexedFreeSpace(override val index: Int, override val block: Block) : IndexedBlock {
+    companion object {
+        val empty = IndexedFreeSpace(-1, FreeSpace(0))
     }
-
-    fun containsFreeSpaces() = blocks.any { it is FreeSpace }
 }
 
-fun removeFilesFromTail(
-    blocks: List<Block>,
-    size: Int,
-    removed: List<Block> = emptyList()
-): Pair<List<Block>, List<Block>> {
-    val (newBlocks, newRemoved) = removeFilesFromHead(blocks.reversed(), size, removed)
-    return newBlocks.reversed() to newRemoved
+data class IndexedFile(override val index: Int, val file: File) : IndexedBlock {
+    override val block = file
+
+    companion object {
+        val empty = IndexedFile(-1, File("", 0))
+    }
 }
 
-fun removeFilesFromHead(
-    blocks: List<Block>,
-    size: Int,
-    removed: List<Block> = emptyList()
-): Pair<List<Block>, List<Block>> {
-    if (size == 0) return blocks to removed
-    val first = blocks.firstOrNull { it is File } ?: return blocks to removed
-    val file = first as File
-    if (size < file.size)
-        return listOf(File(file.id, file.size - size)) + blocks.drop(1) to removed + File(file.id, size)
-    return removeFilesFromHead(blocks.drop(2), size - file.size, removed + file)
+fun <T> Sequence<T>.takeUntil(predicate: (T) -> Boolean): Sequence<T> = sequence {
+    for (element in this@takeUntil) {
+        yield(element)
+        if (predicate(element)) break
+    }
 }
