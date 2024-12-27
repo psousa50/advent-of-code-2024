@@ -11,46 +11,47 @@ class Day11 : AdventOfCode {
     override fun partOne(input: SolutionInput): SolutionResult {
         val stones = input.parseStones()
 
-        return StonesCounter(25, stones).count().asSolution()
+        val distribution = repeatBlink(25, stones.associateWith { 1L })
+
+        return distribution.values.sum().asSolution()
     }
 
     override fun partTwo(input: SolutionInput): SolutionResult {
         val stones = input.parseStones()
 
-        return StonesCounter(75, stones).count().asSolution()
+        val distribution = repeatBlink(75, stones.associateWith { 1L })
+
+        return distribution.values.sum().asSolution()
     }
 }
 
-data class StonesCounter(val blinks: Int, val stones: List<Long>) {
-    fun count(): Long {
-        val distribution = mutableMapOf<Long, Long>().withDefault { 0L }
-        for (stone in stones) {
-            distribution[stone] = 1L
-        }
-        val newDistribution = (1..blinks).fold(distribution) { acc, b -> blink(acc) }
-        return newDistribution.values.sum()
-    }
+tailrec fun repeatBlink(count: Int, distribution: Map<Long, Long>): Map<Long, Long> {
+    return if (count == 0) distribution else repeatBlink(count - 1, blink(distribution))
+}
 
-    private fun blink(distribution: MutableMap<Long, Long>): MutableMap<Long, Long> {
-        val newDistribution = mutableMapOf<Long, Long>().withDefault { 0L }
-        for ((stone, count) in distribution) {
-            val newStones = stone.blink()
-            for (newStone in newStones) {
-                newDistribution[newStone] = newDistribution.getValue(newStone) + count
-            }
+fun blink(distribution: Map<Long, Long>): Map<Long, Long> {
+    val newDistribution = mutableMapOf<Long, Long>().withDefault { 0L }
+    for ((stone, count) in distribution) {
+        val newStones = stone.blink()
+        for (newStone in newStones) {
+            newDistribution[newStone] = newDistribution.getValue(newStone) + count
         }
-        return newDistribution
     }
+    return newDistribution.toMap()
 }
 
 fun SolutionInput.parseStones() = lines.first().split(" ").map { it.toLong() }
 
-fun Long.blink(): List<Long> = when {
-    this == 0L -> listOf(1)
-    this.toString().length % 2 == 0 -> listOf(
-        this.toString().take(this.toString().length / 2).toLong(),
-        this.toString().takeLast(this.toString().length / 2).toLong()
-    )
+fun Long.blink(): List<Long> = this.toString().length.let { length ->
+    when {
+        this == 0L -> listOf(1)
+        length % 2 == 0 -> this.toString().let {
+            listOf(
+                it.take(length / 2).toLong(),
+                it.takeLast(length / 2).toLong()
+            )
+        }
 
-    else -> listOf(this * 2024)
+        else -> listOf(this * 2024)
+    }
 }
