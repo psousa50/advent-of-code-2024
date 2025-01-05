@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
 }
 
 fun AdventOfCode.runPart(part: Int, sample: Int? = null): SolutionResult {
-    val inputFilename = if (sample != null) fileFor("sample$sample") else fileFor("input")
+    val inputFilename = if (sample != null && sample != 0) fileFor("sample$sample") else fileFor("input")
     val input = SolutionInput(Parsers.readLinesFromResource(inputFilename))
     if (input.lines.isEmpty()) {
         throw IllegalArgumentException("No input found for $inputFilename")
