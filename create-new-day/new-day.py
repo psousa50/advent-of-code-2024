@@ -29,8 +29,10 @@ def create_new_day(day_number):
     day_nn = read_template("DayNN")
     context = Context(day_number)
     day_nn_file_content = build_from_template(day_nn, context)
-    if not os.path.exists(f"{SRC}/{context.dayNN}"):
-        os.makedirs(f"{SRC}/{context.dayNN}")
+    if os.path.exists(f"{SRC}/{context.dayNN}"):
+        print(f"Day {context.Day} already exists")
+        return
+    os.makedirs(f"{SRC}/{context.dayNN}")
     write_file(f"{SRC}/{context.dayNN}/{context.DayNN}.kt", day_nn_file_content)
 
     day_test_nn = read_template("DayNNTest")
