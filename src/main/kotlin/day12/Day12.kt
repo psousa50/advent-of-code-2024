@@ -117,7 +117,7 @@ data class Area(val plant: Char, val index: Int) {
     fun assignArea(newArea: Int) = copy(index = newArea)
 }
 
-open class Grid<T>(val cells: Array<Array<T>>) {
+class Grid<T>(val cells: Array<Array<T>>) {
     val maxRow = cells.size
     val maxCol = cells.first().size
 
