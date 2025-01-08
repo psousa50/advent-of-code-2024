@@ -21,155 +21,141 @@ import day15.Direction.Companion.LEFT
 import day15.Direction.Companion.RIGHT
 import java.io.File
 
+typealias MoveBoxFunction = (grid: Grid<Char>, currentCoord: GridCoord, direction: Direction) -> Boolean
+
 class Day15 : AdventOfCode {
     override val day = 15
 
     override fun partOne(input: SolutionInput): SolutionResult {
         val parts = input.lines.split { it.isBlank() }
         val grid = Grid(parts[0].map { it.map { it }.toTypedArray() }.toTypedArray())
-        val moves = parts[1].map { it.map { it.toDirection() } }.flatten()
+        val moves = parts[1].parseMoves()
 
-        var robotCoord = grid.entries().find { it.second == ROBOT_CHAR }!!.first
+        applyMoves(grid, moves, ::moveSmallBox)
 
-        moves.forEach { move ->
-            if (move(grid, robotCoord, move)) {
-                robotCoord = robotCoord.move(move)
-            }
-        }
-
-        return grid.entries().filter { it.second == BOX_CHAR }.map { it.first.gps() }.sum().asSolution()
+        return grid.entries().filter { it.second.isBox() }.map { it.first.gps() }.sum().asSolution()
     }
 
     override fun partTwo(input: SolutionInput): SolutionResult {
         val parts = input.lines.split { it.isBlank() }
         val expanded = parts[0].map { it.wider().map { it }.toTypedArray() }.toTypedArray()
         val grid = Grid(expanded)
-        val moves = parts[1].map { it.map { it.toDirection() } }.flatten()
+        val moves = parts[1].parseMoves()
 
-        var robotCoord = grid.entries().find { it.second == ROBOT_CHAR }!!.first
+        applyMoves(grid, moves, ::moveWiderBox)
 
+        return grid.entries().filter { it.second.isLeftBox() }.map { it.first.gps() }.sum().asSolution()
+    }
 
-        var cs = grid.entries().count { it.second == WALL_CHAR }
-        moves.forEachIndexed { index, move ->
-            if (index == 85) {
-                val a = 1
-            }
-//            val filename = "grids/grid_$index.txt"
-//            grid.saveToFile(filename)
-            if (moveWider(grid, robotCoord, move)) {
-                robotCoord = robotCoord.move(move)
-            }
-            if (grid.entries().count { it.second == WALL_CHAR } != cs) {
-                println("Step $index")
-//                println(grid)
-                cs = grid.entries().count { it.second == WALL_CHAR }
+    private fun applyMoves(grid: Grid<Char>, moves: List<Direction>, moveBox: MoveBoxFunction) {
+        val robotCoord = grid.entries().find { it.second.isRobot() }!!.first
+
+        moves.fold(robotCoord) { coord, direction ->
+            if (move(grid, coord, direction, moveBox)) {
+                coord.move(direction)
+            } else {
+                coord
             }
         }
-
-        return grid.entries().filter { it.second == BOX_LEFT_CHAR }.map { it.first.gps() }.sum().asSolution()
     }
 
     companion object {
-        val UP_CHAR = '^'
-        val DOWN_CHAR = 'v'
-        val LEFT_CHAR = '<'
-        val RIGHT_CHAR = '>'
-        val EMPTY_CHAR = '.'
-        val ROBOT_CHAR = '@'
-        val WALL_CHAR = '#'
-        val BOX_CHAR = 'O'
-        val BOX_LEFT_CHAR = '['
-        val BOX_RIGHT_CHAR = ']'
+        const val UP_CHAR = '^'
+        const val DOWN_CHAR = 'v'
+        const val LEFT_CHAR = '<'
+        const val RIGHT_CHAR = '>'
+        const val EMPTY_CHAR = '.'
+        const val ROBOT_CHAR = '@'
+        const val WALL_CHAR = '#'
+        const val BOX_CHAR = 'O'
+        const val BOX_LEFT_CHAR = '['
+        const val BOX_RIGHT_CHAR = ']'
     }
 }
 
-fun move(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction): Boolean {
+private fun move(
+    grid: Grid<Char>,
+    currentCoord: GridCoord,
+    direction: Direction,
+    moveBoxFunction: MoveBoxFunction
+): Boolean {
     val newCoord = currentCoord.move(direction)
     val targetObj = grid.at(newCoord)
-    return when {
-        targetObj == EMPTY_CHAR || (targetObj.isBox() && move(grid, newCoord, direction)) -> {
-            grid.move(from = currentCoord, to = newCoord)
-            true
-        }
-
-        else -> false
-    }
+    return !targetObj.isWall() &&
+        (targetObj.isEmpty() || moveBoxFunction(grid, newCoord, direction))
+            .also { moved ->
+                if (moved) {
+                    grid.move(from = currentCoord, to = newCoord)
+                }
+            }
 }
 
-fun moveWider(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction): Boolean {
-    if (!grid.contains(currentCoord)) return false
-    val newCoord = currentCoord.move(direction)
-    val targetObj = grid.at(newCoord)
-    return when {
-        targetObj == EMPTY_CHAR || (targetObj.isBox() && moveBox(grid, newCoord, direction)) -> {
-            grid.move(from = currentCoord, to = newCoord)
-            true
-        }
+private fun moveSmallBox(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction): Boolean =
+    move(grid, currentCoord, direction, ::moveSmallBox)
 
-        else -> false
-    }
-}
-
-fun moveBox(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction) =
-    when {
-        direction.isHorizontal -> moveBoxHorizontal(grid, currentCoord, direction)
-        else -> moveBoxVertical(grid, grid.at(currentCoord).box(currentCoord), direction)
+private fun moveWiderBox(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction) =
+    if (direction.isHorizontal) {
+        moveBoxHorizontal(grid, currentCoord, direction)
+    } else {
+        moveBoxVertical(grid, grid.at(currentCoord).box(currentCoord), direction)
     }
 
-fun moveBoxHorizontal(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction): Boolean {
+private fun moveBoxHorizontal(grid: Grid<Char>, currentCoord: GridCoord, direction: Direction): Boolean {
     val newCoord = currentCoord.move(direction).move(direction)
     val targetObj = grid.at(newCoord)
-    return when {
-        targetObj == EMPTY_CHAR || (targetObj.isBox() && moveBox(grid, newCoord, direction)) -> {
-            grid.move(currentCoord.move(direction), newCoord)
-            grid.move(currentCoord, currentCoord.move(direction))
-            true
+    return !targetObj.isWall() &&
+        (targetObj.isEmpty() || moveWiderBox(grid, newCoord, direction)).also { moved ->
+            if (moved) {
+                grid.move(currentCoord.move(direction), newCoord)
+                grid.move(currentCoord, currentCoord.move(direction))
+            }
         }
-
-        else -> false
-    }
 }
 
-fun moveBoxVertical(
+private fun moveBoxVertical(
     grid: Grid<Char>,
     currentCoords: Pair<GridCoord, GridCoord>,
     direction: Direction,
 ): Boolean {
-    val newCoord1 = currentCoords.first.move(direction)
-    val newCoord2 = currentCoords.second.move(direction)
-    val targetObj1 = grid.at(newCoord1)
-    val targetObj2 = grid.at(newCoord2)
-    if (targetObj1 == WALL_CHAR || targetObj2 == WALL_CHAR) return false
-    return ((targetObj1 == EMPTY_CHAR && targetObj2 == EMPTY_CHAR) || ((targetObj1.isBox() || targetObj2.isBox()) && canMoveBoxVertical(
-        grid,
-        newCoord1 to newCoord2,
-        direction
-    ))).also { moved ->
-        if (moved) {
-            grid.move(currentCoords.first, currentCoords.first.move(direction))
-            grid.move(currentCoords.second, currentCoords.second.move(direction))
-        }
-    }
+    val newCoords = currentCoords.move(direction)
+    val targetObj = grid.at(newCoords)
+    return (!targetObj.isWall() &&
+        (targetObj.isEmpty() || canMoveBoxVertical(grid, newCoords, direction))
+            .also { moved ->
+                if (moved) {
+                    grid.move(currentCoords.first, currentCoords.first.move(direction))
+                    grid.move(currentCoords.second, currentCoords.second.move(direction))
+                }
+            }
+        )
 }
 
-fun canMoveBoxVertical(grid: Grid<Char>, currentCoords: Pair<GridCoord, GridCoord>, direction: Direction): Boolean {
-    val targetObj1 = grid.at(currentCoords.first)
-    val targetObj2 = grid.at(currentCoords.second)
-    if (targetObj1 == EMPTY_CHAR && targetObj2 == EMPTY_CHAR) {
-        grid.move(currentCoords.first, currentCoords.first.move(direction))
-        grid.move(currentCoords.second, currentCoords.second.move(direction))
-        return true
-    }
+private fun canMoveBoxVertical(
+    grid: Grid<Char>,
+    currentCoords: Pair<GridCoord, GridCoord>,
+    direction: Direction
+): Boolean {
+    val targetObj = grid.at(currentCoords)
+    return targetObj.isEmpty() || canMoveBoxVertical(grid, currentCoords, direction, targetObj)
+}
+
+private fun canMoveBoxVertical(
+    grid: Grid<Char>,
+    currentCoords: Pair<GridCoord, GridCoord>,
+    direction: Direction,
+    targetObj: Pair<Char, Char>,
+): Boolean {
     val coords = setOf(
-        targetObj1.maybeBox(currentCoords.first),
-        targetObj2.maybeBox(currentCoords.second)
+        targetObj.first.maybeBox(currentCoords.first),
+        targetObj.second.maybeBox(currentCoords.second)
     ).filterNotNull()
     val copyGrid = Grid(grid.cells.map { it.copyOf() }.toTypedArray())
-    if (coords.size > 0 && coords.all { moveBoxVertical(grid, it, direction) }) {
-        return true
-    } else {
-        grid.copyFrom(copyGrid)
-        return false
+    return targetObj.isEmpty() || (coords.isNotEmpty() && coords.all {
+        moveBoxVertical(grid, it, direction)
+    }).also { moved ->
+        if (!moved) {
+            grid.copyFrom(copyGrid)
+        }
     }
 }
 
@@ -238,6 +224,7 @@ class Grid<T>(val cells: Array<Array<T>>) {
     fun entries() = coords().map { it to at(it) }
 
     fun at(p: GridCoord) = cells[p.row][p.col]
+    fun at(ps: Pair<GridCoord, GridCoord>) = at(ps.first) to at(ps.second)
 
     fun saveToFile(filename: String) {
         File(filename).bufferedWriter().use { writer ->
@@ -263,15 +250,23 @@ fun Grid<Char>.move(from: GridCoord, to: GridCoord) {
 }
 
 fun Char.isBox() = this == BOX_CHAR || this == BOX_LEFT_CHAR || this == BOX_RIGHT_CHAR
-
-fun Char.box(coord: GridCoord) = when (this) {
-    BOX_LEFT_CHAR -> coord to coord.move(RIGHT)
-    BOX_RIGHT_CHAR -> coord to coord.move(LEFT)
-    else -> throw IllegalArgumentException("Not a box: $this")
-}
+fun Char.isLeftBox() = this == BOX_LEFT_CHAR
+fun Char.isWall() = this == WALL_CHAR
+fun Char.isEmpty() = this == EMPTY_CHAR
+fun Char.isRobot() = this == ROBOT_CHAR
 
 fun Char.maybeBox(coord: GridCoord) = when (this) {
     BOX_LEFT_CHAR -> listOf(coord, coord.move(RIGHT)).sortedBy { it.col }.let { it[0] to it[1] }
     BOX_RIGHT_CHAR -> listOf(coord, coord.move(LEFT)).sortedBy { it.col }.let { it[0] to it[1] }
     else -> null
 }
+
+fun Char.box(coord: GridCoord) = maybeBox(coord) ?: throw IllegalArgumentException("Not a box: $this")
+
+fun Pair<GridCoord, GridCoord>.move(direction: Direction) = first.move(direction) to second.move(direction)
+fun Pair<Char, Char>.isEmpty() = first.isEmpty() && second.isEmpty()
+fun Pair<Char, Char>.isWall() = first.isWall() || second.isWall()
+
+private fun List<String>.parseMoves() =
+    map { it.map { it.toDirection() } }.flatten()
+

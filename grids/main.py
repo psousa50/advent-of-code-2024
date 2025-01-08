@@ -32,7 +32,7 @@ def main(stdscr):
         stdscr.getch()
         return
 
-    index = 92  # Start with the first file
+    index = 0  # Start with the first file
     total_files = len(files)
 
     display_file(stdscr, files[index], index, total_files)
