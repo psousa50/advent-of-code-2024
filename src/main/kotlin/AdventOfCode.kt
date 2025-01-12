@@ -28,6 +28,7 @@ interface AdventOfCode {
             14 to day14.Day14(),
             15 to day15.Day15(),
             16 to day16.Day16(),
+            17 to day17.Day17(),
             // {{ NextDay }}
         )
     }
@@ -40,9 +41,11 @@ data class SolutionInput(
 data class SolutionResult(val value: String) {
     val asInt get() = value.toInt()
     val asLong get() = value.toLong()
+    val asString get() = value
     override fun toString() = value
 
 }
 
 fun Int.asSolution() = SolutionResult(this.toString())
 fun Long.asSolution() = SolutionResult(this.toString())
+fun String.asSolution() = SolutionResult(this)
