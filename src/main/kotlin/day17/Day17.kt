@@ -2,14 +2,9 @@ package day17
 
 import AdventOfCode
 import Parsers.split
-import Parsers.toInts
 import SolutionInput
 import SolutionResult
 import asSolution
-import day14.parseRobot
-import jdk.internal.org.jline.utils.Colors.s
-import java.nio.file.Files.lines
-import java.nio.file.Files.move
 import kotlin.math.pow
 
 class Day17 : AdventOfCode {
@@ -22,9 +17,7 @@ class Day17 : AdventOfCode {
 
         val computer = Computer(program, CPU(registers[0], registers[1], registers[2]))
 
-        val states = computer.run()
-
-        return states.mapNotNull { it.output }.joinToString(",").asSolution()
+        return computer.run().mapNotNull { it.output }.joinToString(",").asSolution()
     }
 
     override fun partTwo(input: SolutionInput): SolutionResult {
@@ -36,21 +29,20 @@ class Day17 : AdventOfCode {
         return a.asSolution()
     }
 
-    private fun findA(a: Long, programToMatch: List<Int>, program: List<Int>): Long? {
+    private fun findA(currentA: Long, programToMatch: List<Int>, program: List<Int>): Long? {
         return if (programToMatch.isEmpty()) {
-            a
+            currentA
         } else {
-            val results = (8 * a..8 * a + 7).map {
-                Computer(program, CPU(it, 0, 0)).run().mapNotNull { s -> s.output }.first()
-            }
-            val possibilities = results.withIndex().filter { it.value == programToMatch.last() }.map { it.index }
-            return possibilities.firstNotNullOfOrNull {
-                findA(
-                    a = it + (8 * a),
-                    programToMatch = programToMatch.dropLast(1),
-                    program = program
-                )
-            }
+            (8 * currentA..8 * currentA + 7).map { newA ->
+                Computer(program, CPU(newA, 0, 0)).run().mapNotNull { s -> s.output }.first()
+            }.mapIndexedNotNull { valueForA, output -> if (output == programToMatch.last()) valueForA else null }
+                .firstNotNullOfOrNull { valueForA ->
+                    findA(
+                        currentA = valueForA + (8 * currentA),
+                        programToMatch = programToMatch.dropLast(1),
+                        program = program
+                    )
+                }
         }
     }
 }
